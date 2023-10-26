@@ -24,7 +24,7 @@ public class STOMPConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config
-                .enableStompBrokerRelay("/queue")
+                .enableStompBrokerRelay("/queue","/exchange")
                 .setRelayHost(host)
                 .setRelayPort(port)
                 .setClientLogin(userName)

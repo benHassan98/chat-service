@@ -1,5 +1,7 @@
 package com.odinbook.chatservice.config;
 
+import jakarta.annotation.PostConstruct;
+import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -13,7 +15,10 @@ public class AMQPConfig {
 
     @Bean
     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory){
-        return new RabbitAdmin(connectionFactory);
-    }
+        RabbitAdmin rabbitAdmin = new RabbitAdmin(connectionFactory);
 
+        rabbitAdmin.declareExchange(new DirectExchange("availableFriends"));
+
+        return rabbitAdmin;
+    }
 }

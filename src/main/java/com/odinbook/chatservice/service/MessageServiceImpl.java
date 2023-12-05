@@ -2,16 +2,23 @@ package com.odinbook.chatservice.service;
 
 import com.odinbook.chatservice.model.Message;
 import com.odinbook.chatservice.repository.MessageRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @Service
 public class MessageServiceImpl implements MessageService{
 
+    @PersistenceContext
+    private EntityManager entityManager;
     private final MessageRepository messageRepository;
     private final ImageService imageService;
 
@@ -31,18 +38,44 @@ public class MessageServiceImpl implements MessageService{
     @Override
     public Message createMessage(Message message) {
 
-        message.setId(messageRepository.saveAndFlush(message).getId());
+        return messageRepository.saveAndFlush(message);
+    }
 
-        imageService.createBlobs(
-                "message."+message.getId(),
-                message.getImageList()
-        );
+    @Override
+    public void saveMessageImages(String[] idList, MultipartFile[] fileList) {
+        try{
+            imageService.createBlobs(idList, fileList);
+        }
+        catch (IOException | RuntimeException exception){
+            exception.printStackTrace();
+        }
+    }
 
-        String newContent = imageService.injectImagesToHTML(message.getContent(),
-                message.getImageList());
+    @Override
+    public Message deleteMessage(Message message) {
 
-        message.setContent(newContent);
+        imageService.deleteImages(message.getContent());
+
+        message.setDeleted(true);
+        message.setContent("");
 
         return messageRepository.saveAndFlush(message);
+
+    }
+
+    @Override
+    @Transactional
+    public void viewMessageById(Long id) {
+
+        entityManager
+                .createNativeQuery("UPDATE messages SET is_viewed = 1 WHERE id = :id")
+                .setParameter("id",id)
+                .executeUpdate();
+
+    }
+
+    @Override
+    public List<Message> findUnReadMessagesByReceiverId(Long receiverId) {
+        return messageRepository.findUnReadMessagesByReceiverId(receiverId);
     }
 }

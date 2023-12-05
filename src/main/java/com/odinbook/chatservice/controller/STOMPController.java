@@ -1,13 +1,9 @@
 package com.odinbook.chatservice.controller;
 
-import com.azure.core.implementation.util.ObjectsUtil;
 import com.odinbook.chatservice.model.Message;
-import com.odinbook.chatservice.record.AvailableFriendsRecord;
+import com.odinbook.chatservice.record.FriendsRecord;
 import com.odinbook.chatservice.record.NewMessageRecord;
 import com.odinbook.chatservice.service.MessageService;
-import org.springframework.amqp.core.DirectExchange;
-import org.springframework.amqp.core.QueueBuilder;
-import org.springframework.amqp.core.QueueInformation;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -18,15 +14,9 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.TreeMap;
 
 @Controller
 public class STOMPController {
@@ -47,21 +37,22 @@ public class STOMPController {
         this.notificationRequest = notificationRequest;
     }
 
-    @MessageMapping("/chat")
+    @MessageMapping("/chat/send")
     public void sendMessage(@Payload Message message){
 
     Message savedMessage = messageService.createMessage(message);
 
     if(Objects.nonNull(rabbitAdmin.getQueueInfo("chat."+savedMessage.getReceiverId().toString()))){
-        TreeMap<String, Object> treeMap = new TreeMap<>();
-        treeMap.put("auto-delete",true);
-        treeMap.put("durable",true);
+//        TreeMap<String, Object> treeMap = new TreeMap<>();
+//        treeMap.put("auto-delete",true);
+//        treeMap.put("durable",true);
 
         simpMessagingTemplate
                 .convertAndSend(
                         "/queue/chat."+savedMessage.getReceiverId().toString(),
-                        savedMessage,
-                        treeMap
+                        savedMessage
+//                        ,
+//                        treeMap
                 );
     }
     else{
@@ -75,20 +66,86 @@ public class STOMPController {
 
     }
 
-    @MessageMapping("/chat/availableFriends")
-    public void findAvailableFriends(@Payload AvailableFriendsRecord availableFriendsRecord){
+    @MessageMapping("/chat/availableFriend")
+    public void availableFriend(@Payload FriendsRecord friendsRecord){
 
-        List<Long> newFriendList = availableFriendsRecord.friendList().stream()
+        friendsRecord.friendList().forEach(friendId->{
+            if(Objects.nonNull(rabbitAdmin.getQueueInfo("chat."+friendId.toString()))){
+
+                simpMessagingTemplate.convertAndSend(
+                        "/exchange/availableFriends/availableFriend."+friendId,
+                        friendsRecord.accountId()
+                );
+
+            }
+
+        });
+
+
+    }
+
+    @MessageMapping("/chat/unAvailableFriend")
+    public void unAvailableFriend(@Payload FriendsRecord friendsRecord){
+
+        friendsRecord.friendList().forEach(friendId->{
+            if(Objects.nonNull(rabbitAdmin.getQueueInfo("chat."+friendId.toString()))){
+
+                simpMessagingTemplate.convertAndSend(
+                        "/exchange/availableFriends/unAvailableFriend."+friendId,
+                        friendsRecord.accountId()
+                );
+
+            }
+
+        });
+
+
+    }
+
+
+
+
+
+    @MessageMapping("/chat/availableFriends")
+    public void findAvailableFriends(@Payload FriendsRecord friendsRecord){
+
+        List<Long> newFriendList = friendsRecord.friendList().stream()
                 .filter(
                         friend->Objects.nonNull(rabbitAdmin.getQueueInfo("chat."+friend.toString()))
                 ).toList();
 
         simpMessagingTemplate.convertAndSend(
-                "/exchange/availableFriends/"+availableFriendsRecord.accountId(),
+                "/exchange/availableFriends/"+ friendsRecord.accountId(),
                 newFriendList
                 );
 
     }
+
+
+    @MessageMapping("/chat/delete")
+    public void deleteMessage(@Payload Message message){
+
+        Message deletedMessage = messageService.deleteMessage(message);
+
+        if(Objects.nonNull(rabbitAdmin.getQueueInfo("chat."+deletedMessage.getReceiverId()))){
+
+            simpMessagingTemplate.convertAndSend(
+                    "/queue/chat."+deletedMessage.getReceiverId(),
+                    deletedMessage
+            );
+
+        }
+
+    }
+
+
+    @MessageMapping("/chat/view/{id}")
+    public void viewMessage(@DestinationVariable("id") Long id){
+        
+        messageService.viewMessageById(id);
+    }
+
+
 
 
 }

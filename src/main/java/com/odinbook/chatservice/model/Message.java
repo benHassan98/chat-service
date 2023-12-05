@@ -5,7 +5,10 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.awt.*;
 import java.sql.Date;
+import java.time.Instant;
+import java.util.List;
 
 @Entity
 @Table(name = "messages")
@@ -20,13 +23,16 @@ public class Message {
     @Column(name = "content")
     private String content;
 
-    @Transient
-    private MultipartFile[] imageList;
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false;
+
+    @Column(name = "is_viewed")
+    private Boolean isViewed = false;
     @Column(name = "created_date", nullable = false, updatable = false)
     @CreationTimestamp
-    private Date createdDate;
+    private Instant createdDate;
 
-    public Date getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
@@ -62,11 +68,19 @@ public class Message {
         this.content = content;
     }
 
-    public MultipartFile[] getImageList() {
-        return imageList;
+    public Boolean getDeleted() {
+        return isDeleted;
     }
 
-    public void setImageList(MultipartFile[] imageList) {
-        this.imageList = imageList;
+    public void setDeleted(Boolean deleted) {
+        isDeleted = deleted;
+    }
+
+    public Boolean getViewed() {
+        return isViewed;
+    }
+
+    public void setViewed(Boolean viewed) {
+        isViewed = viewed;
     }
 }

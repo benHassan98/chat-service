@@ -17,6 +17,7 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.TreeMap;
 
 @Controller
 public class STOMPController {
@@ -39,21 +40,32 @@ public class STOMPController {
 
     @MessageMapping("/chat/send")
     public void sendMessage(@Payload Message message){
+        TreeMap<String, Object> treeMap = new TreeMap<>();
+        treeMap.put("auto-delete",true);
+        treeMap.put("durable",true);
 
     Message savedMessage = messageService.createMessage(message);
 
-    if(Objects.nonNull(rabbitAdmin.getQueueInfo("chat."+savedMessage.getReceiverId().toString()))){
-//        TreeMap<String, Object> treeMap = new TreeMap<>();
-//        treeMap.put("auto-delete",true);
-//        treeMap.put("durable",true);
+        simpMessagingTemplate
+                .convertAndSend(
+                        "/queue/chat."+savedMessage.getSenderId().toString(),
+                        savedMessage
+                        ,
+                        treeMap
+                );
+
+
+        if(Objects.nonNull(rabbitAdmin.getQueueInfo("chat."+savedMessage.getReceiverId().toString()))){
+
 
         simpMessagingTemplate
                 .convertAndSend(
                         "/queue/chat."+savedMessage.getReceiverId().toString(),
                         savedMessage
-//                        ,
-//                        treeMap
+                        ,
+                        treeMap
                 );
+
     }
     else{
         notificationRequest.send(
@@ -115,7 +127,7 @@ public class STOMPController {
                 ).toList();
 
         simpMessagingTemplate.convertAndSend(
-                "/exchange/availableFriends/"+ friendsRecord.accountId(),
+                "/exchange/availableFriends/"+friendsRecord.accountId(),
                 newFriendList
                 );
 
@@ -144,8 +156,6 @@ public class STOMPController {
         
         messageService.viewMessageById(id);
     }
-
-
 
 
 }

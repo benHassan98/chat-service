@@ -22,47 +22,6 @@ public class ImageServiceImpl implements ImageService{
     @Value("${spring.cloud.azure.storage.connection-string}")
     private String connectStr;
     @Override
-    public void createBlobs(String[] idList, MultipartFile[] fileList) throws RuntimeException, IOException {
-        if(Objects.isNull(idList))
-            return;
-        if(idList.length == 0)
-            return;
-
-        for(int i =0;i<idList.length;i++){
-
-
-            new BlobServiceClientBuilder()
-                    .connectionString(connectStr)
-                    .buildClient()
-                    .getBlobContainerClient("images")
-                    .getBlobClient(idList[i])
-                    .upload(fileList[i].getInputStream());
-
-
-        }
-
-
-
-    }
-
-    @Override
-    public String injectImagesToHTML(String html, List<String> imageNameList) {
-        AtomicInteger index = new AtomicInteger();
-
-        Document document =  Jsoup.parse(html);
-        document
-                .select("img")
-                .replaceAll(element ->
-                        element.attributes().hasKey("is-new")?
-                                element.attr("src", imageNameList.get(index.getAndIncrement()))
-                                        .removeAttr("is-new"):
-                                element.removeAttr("is-new")
-                );
-
-        return document.body().html();
-    }
-
-    @Override
     public void deleteImages(String content) {
 
         BlobContainerClient blobContainerClient = new BlobServiceClientBuilder()

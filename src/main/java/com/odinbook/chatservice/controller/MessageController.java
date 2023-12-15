@@ -28,12 +28,5 @@ public class MessageController {
         return ResponseEntity.ok(messageService.findUnReadMessagesByReceiverId(receiverId));
     }
 
-    @PostMapping("/message/images")
-    public void createMessage(
-            @RequestParam(value = "idList",required = false) String[] idList,
-            @RequestParam(value = "fileList",required = false) MultipartFile[] fileList){
-
-        messageService.saveMessageImages(idList, fileList);
-    }
 
 }

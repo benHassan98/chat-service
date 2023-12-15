@@ -42,16 +42,6 @@ public class MessageServiceImpl implements MessageService{
     }
 
     @Override
-    public void saveMessageImages(String[] idList, MultipartFile[] fileList) {
-        try{
-            imageService.createBlobs(idList, fileList);
-        }
-        catch (IOException | RuntimeException exception){
-            exception.printStackTrace();
-        }
-    }
-
-    @Override
     public Message deleteMessage(Message message) {
 
         imageService.deleteImages(message.getContent());

@@ -20,14 +20,11 @@ public class MessageServiceImpl implements MessageService{
     @PersistenceContext
     private EntityManager entityManager;
     private final MessageRepository messageRepository;
-    private final ImageService imageService;
 
 
     @Autowired
-    public MessageServiceImpl(MessageRepository messageRepository,
-                              ImageService imageService) {
+    public MessageServiceImpl(MessageRepository messageRepository) {
         this.messageRepository = messageRepository;
-        this.imageService = imageService;
     }
 
     @Override
@@ -44,8 +41,6 @@ public class MessageServiceImpl implements MessageService{
     @Override
     public Message deleteMessage(Message message) {
 
-        imageService.deleteImages(message.getContent());
-
         message.setDeleted(true);
         message.setContent("");
 
@@ -58,7 +53,7 @@ public class MessageServiceImpl implements MessageService{
     public void viewMessageById(Long id) {
 
         entityManager
-                .createNativeQuery("UPDATE messages SET is_viewed = 1 WHERE id = :id")
+                .createNativeQuery("UPDATE messages SET is_viewed = true WHERE id = :id")
                 .setParameter("id",id)
                 .executeUpdate();
 

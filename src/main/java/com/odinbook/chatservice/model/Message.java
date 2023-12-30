@@ -7,6 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.awt.*;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 
@@ -30,9 +31,9 @@ public class Message {
     private Boolean isViewed = false;
     @Column(name = "created_date", nullable = false, updatable = false)
     @CreationTimestamp
-    private Instant createdDate;
+    private Timestamp createdDate;
 
-    public Instant getCreatedDate() {
+    public Timestamp getCreatedDate() {
         return createdDate;
     }
 

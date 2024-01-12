@@ -4,7 +4,7 @@ import com.odinbook.chatservice.model.Message;
 import com.odinbook.chatservice.record.FriendsRecord;
 import com.odinbook.chatservice.record.NewMessageRecord;
 import com.odinbook.chatservice.service.MessageService;
-import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import com.odinbook.chatservice.service.STOMPService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.messaging.MessageChannel;
@@ -22,96 +22,23 @@ import java.util.TreeMap;
 @Controller
 public class STOMPController {
 
-    private final MessageService messageService;
-    private final SimpMessagingTemplate simpMessagingTemplate;
-    private final RabbitAdmin rabbitAdmin;
-    private final MessageChannel notificationRequest;
+    private final STOMPService stompService;
 
     @Autowired
-    public STOMPController(MessageService messageService,
-                           SimpMessagingTemplate simpMessagingTemplate,
-                           RabbitAdmin rabbitAdmin,
-                           @Qualifier("notificationRequest") MessageChannel notificationRequest) {
-        this.messageService = messageService;
-        this.simpMessagingTemplate = simpMessagingTemplate;
-        this.rabbitAdmin = rabbitAdmin;
-        this.notificationRequest = notificationRequest;
+    public STOMPController(STOMPService stompService) {
+        this.stompService = stompService;
     }
 
-    @MessageMapping("/chat/send")
-    public void sendMessage(@Payload Message message){
-        TreeMap<String, Object> treeMap = new TreeMap<>();
-        treeMap.put("auto-delete",true);
-        treeMap.put("durable",true);
 
-    Message savedMessage = messageService.createMessage(message);
-
-        simpMessagingTemplate
-                .convertAndSend(
-                        "/queue/chat."+savedMessage.getSenderId().toString(),
-                        savedMessage
-                        ,
-                        treeMap
-                );
-
-
-        if(Objects.nonNull(rabbitAdmin.getQueueInfo("chat."+savedMessage.getReceiverId().toString()))){
-
-
-        simpMessagingTemplate
-                .convertAndSend(
-                        "/queue/chat."+savedMessage.getReceiverId().toString(),
-                        savedMessage
-                        ,
-                        treeMap
-                );
-
-    }
-    else{
-        notificationRequest.send(
-                MessageBuilder
-                        .withPayload(new NewMessageRecord(savedMessage.getSenderId(), savedMessage.getReceiverId()))
-                        .setHeader("notificationType","newMessage")
-                        .build()
-        );
-    }
-
-    }
 
     @MessageMapping("/chat/availableFriend")
     public void availableFriend(@Payload FriendsRecord friendsRecord){
-
-        friendsRecord.friendList().forEach(friendId->{
-            if(Objects.nonNull(rabbitAdmin.getQueueInfo("chat."+friendId.toString()))){
-
-                simpMessagingTemplate.convertAndSend(
-                        "/exchange/availableFriends/availableFriend."+friendId,
-                        friendsRecord.accountId()
-                );
-
-            }
-
-        });
-
-
+        stompService.notifyFriendsOfAvailableAccount(friendsRecord);
     }
 
     @MessageMapping("/chat/unAvailableFriend")
     public void unAvailableFriend(@Payload FriendsRecord friendsRecord){
-
-        friendsRecord.friendList().forEach(friendId->{
-            if(Objects.nonNull(rabbitAdmin.getQueueInfo("chat."+friendId.toString()))){
-
-                simpMessagingTemplate.convertAndSend(
-                        "/exchange/availableFriends/unAvailableFriend."+friendId,
-                        friendsRecord.accountId()
-                );
-
-            }
-
-        });
-
-
+        stompService.notifyFriendsOfUnAvailableAccount(friendsRecord);
     }
 
 
@@ -120,42 +47,7 @@ public class STOMPController {
 
     @MessageMapping("/chat/availableFriends")
     public void findAvailableFriends(@Payload FriendsRecord friendsRecord){
-
-        List<Long> newFriendList = friendsRecord.friendList().stream()
-                .filter(
-                        friend->Objects.nonNull(rabbitAdmin.getQueueInfo("chat."+friend.toString()))
-                ).toList();
-
-        simpMessagingTemplate.convertAndSend(
-                "/exchange/availableFriends/"+friendsRecord.accountId(),
-                newFriendList
-                );
-
+        stompService.findAvailableAccounts(friendsRecord);
     }
-
-
-    @MessageMapping("/chat/delete")
-    public void deleteMessage(@Payload Message message){
-
-        Message deletedMessage = messageService.deleteMessage(message);
-
-        if(Objects.nonNull(rabbitAdmin.getQueueInfo("chat."+deletedMessage.getReceiverId()))){
-
-            simpMessagingTemplate.convertAndSend(
-                    "/queue/chat."+deletedMessage.getReceiverId(),
-                    deletedMessage
-            );
-
-        }
-
-    }
-
-
-    @MessageMapping("/chat/view/{id}")
-    public void viewMessage(@DestinationVariable("id") Long id){
-        
-        messageService.viewMessageById(id);
-    }
-
 
 }

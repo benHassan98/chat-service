@@ -15,15 +15,6 @@ import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 @Configuration
 public class RedisConfig {
 
-    @Value("${spring.data.redis.host}")
-    private String host;
-    @Value("${spring.data.redis.port}")
-    private int port;
-
-    @Bean
-    RedisConnectionFactory connectionFactory(){
-        return new LettuceConnectionFactory(new RedisStandaloneConfiguration(host, port));
-    }
     @Bean
     StringRedisTemplate template(RedisConnectionFactory connectionFactory) {
         return new StringRedisTemplate(connectionFactory);

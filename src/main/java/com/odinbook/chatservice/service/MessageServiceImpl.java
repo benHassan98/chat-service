@@ -97,7 +97,8 @@ public class MessageServiceImpl implements MessageService{
 
         message.setDeleted(true);
         message.setContent("");
-
+        messageRepository.saveAndFlush(message);
+        
         if(connectionsCollection.getCollection().stream().anyMatch(pair->pair.b.equals("/queue/chat."+message.getReceiverId()))){
 
             simpMessagingTemplate.convertAndSend(
